@@ -29,7 +29,7 @@
         <select id="chonChucNang">
             <option value="tach">1. Tách PDF thành nhiều trang lẻ</option>
             <option value="gop">2. Gộp nhiều file PDF thành 1</option>
-            <option value="xoa">3. Xóa trang bất kỳ trong PDF</option>
+            <option value="xoa">3. Xóa nhiều trang liên tục trong PDF</option>
         </select>
 
         <div id="vungTach" class="vung-chuc-nang hien-thi">
@@ -56,8 +56,11 @@
             <label for="chonFileXoa">Chọn tệp PDF cần xử lý:</label>
             <input type="file" id="chonFileXoa" accept="application/pdf">
 
-            <label for="trangXoa">Số thứ tự trang cần xóa:</label>
-            <input type="number" id="trangXoa" min="1" value="1" placeholder="Ví dụ: Nhập 2 để xóa trang số 2">
+            <label for="trangTuXoa">Xóa từ trang:</label>
+            <input type="number" id="trangTuXoa" min="1" value="1">
+
+            <label for="trangDenXoa">Xóa đến trang:</label>
+            <input type="number" id="trangDenXoa" min="1" value="1">
 
             <button id="nutXoa" style="background-color: #dc3545;">Xóa trang và Tải về</button>
         </div>
@@ -97,6 +100,7 @@
             if (loai === 'thanh-cong') theThongBao.style.color = "#28a745";
         }
 
+        // ham don gian hoa viec xuat file de tai ve
         function taiXuongFile(duLieuUint8Array, tenFile) {
             const doiTuongBlob = new Blob([duLieuUint8Array], { type: "application/pdf" });
             const duongDanTaiVe = URL.createObjectURL(doiTuongBlob);
@@ -182,29 +186,35 @@
         // --- CHUC NANG 3: XOA TRANG PDF ---
         async function xuLyXoaTrangPdf() {
             const fileInput = document.getElementById('chonFileXoa');
-            const oNhapTrangXoa = document.getElementById('trangXoa');
+            const oNhapTrangTuXoa = document.getElementById('trangTuXoa');
+            const oNhapTrangDenXoa = document.getElementById('trangDenXoa');
 
             if (fileInput.files.length === 0) return hienThiThongBao("Vui lòng chọn tệp PDF cần xử lý!", "loi");
 
             const fileDuocChon = fileInput.files[0];
             const tenFileGoc = fileDuocChon.name.replace('.pdf', '');
-            const viTriCanXoa = parseInt(oNhapTrangXoa.value) - 1; // mang bat dau tu 0
+            const trangBatDauXoa = parseInt(oNhapTrangTuXoa.value) - 1; // mang bat dau tu 0
+            const trangKetThucXoa = parseInt(oNhapTrangDenXoa.value) - 1;
 
-            if (viTriCanXoa < 0) return hienThiThongBao("Số trang cần xóa không hợp lệ!", "loi");
+            if (trangBatDauXoa > trangKetThucXoa || trangBatDauXoa < 0) return hienThiThongBao("Số trang bắt đầu và kết thúc không hợp lệ!", "loi");
 
             try {
                 hienThiThongBao("Đang tiến hành xóa trang...", "tien-trinh");
                 const duLieuFile = await fileDuocChon.arrayBuffer();
                 const pdfGoc = await PDFLib.PDFDocument.load(duLieuFile);
+                const tongSoTrang = pdfGoc.getPageCount();
 
-                if (viTriCanXoa >= pdfGoc.getPageCount()) return hienThiThongBao("Số trang cần xóa vượt quá tổng số trang của tệp!", "loi");
+                if (trangKetThucXoa >= tongSoTrang) return hienThiThongBao("Trang kết thúc vượt quá tổng số trang của tệp!", "loi");
 
-                // xoa trang tai vi tri da chi dinh
-                pdfGoc.removePage(viTriCanXoa);
+                // xoa trang tu cuoi len dau de khong lam sai lech chi so cac trang con lai
+                for (let viTri = trangKetThucXoa; viTri >= trangBatDauXoa; viTri--) {
+                    pdfGoc.removePage(viTri);
+                }
 
                 const duLieuPdfMoi = await pdfGoc.save();
-                taiXuongFile(duLieuPdfMoi, `${tenFileGoc}_da_xoa_trang_${viTriCanXoa + 1}.pdf`);
-                hienThiThongBao(`Đã xóa thành công trang ${viTriCanXoa + 1}!`, "thanh-cong");
+                // hien thi file luu ve voi ten ro rang hon
+                taiXuongFile(duLieuPdfMoi, `${tenFileGoc}_da_xoa_tu_${trangBatDauXoa + 1}_den_${trangKetThucXoa + 1}.pdf`);
+                hienThiThongBao(`Đã xóa thành công từ trang ${trangBatDauXoa + 1} đến trang ${trangKetThucXoa + 1}!`, "thanh-cong");
 
             } catch (loi) {
                 console.error(loi);
