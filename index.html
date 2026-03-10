@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Tách PDF</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .khung-chua { max-width: 450px; margin: auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
+        input[type="number"], input[type="file"] { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { margin-top: 20px; width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        #thongBao { margin-top: 15px; font-weight: bold; color: #d9534f; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="khung-chua">
+        <h2>Phần mềm Tách trang PDF</h2>
+        
+        <label for="chonFile">Chọn tệp PDF:</label>
+        <input type="file" id="chonFile" accept="application/pdf">
+
+        <label for="trangTu">Từ trang:</label>
+        <input type="number" id="trangTu" min="1" value="1">
+
+        <label for="trangDen">Đến trang:</label>
+        <input type="number" id="trangDen" min="1" value="1">
+
+        <button id="nutTach">Tách và Tải về</button>
+        <p id="thongBao"></p>
+    </div>
+
+    <script>
+        // ham xu ly tach file pdf chinh
+        async function xuLyTachPdf() {
+            const theInputFile = document.getElementById('chonFile');
+            const oNhapTrangTu = document.getElementById('trangTu');
+            const oNhapTrangDen = document.getElementById('trangDen');
+            const theThongBao = document.getElementById('thongBao');
+
+            // kiem tra xem nguoi dung da chon file chua
+            if (theInputFile.files.length === 0) {
+                theThongBao.innerText = "Vui lòng chọn tệp PDF trước!";
+                theThongBao.style.color = "#d9534f";
+                return;
+            }
+
+            const fileDuocChon = theInputFile.files[0];
+            const trangBatDau = parseInt(oNhapTrangTu.value) - 1; // mang bat dau tu vi tri 0
+            const trangKetThuc = parseInt(oNhapTrangDen.value) - 1;
+
+            // kiem tra tinh hop le cua so trang
+            if (trangBatDau > trangKetThuc || trangBatDau < 0) {
+                theThongBao.innerText = "Số trang bắt đầu và kết thúc không hợp lệ!";
+                theThongBao.style.color = "#d9534f";
+                return;
+            }
+
+            try {
+                theThongBao.innerText = "Đang xử lý dữ liệu...";
+                theThongBao.style.color = "#007bff";
+
+                // doc du lieu tu file nguoi dung tai len
+                const duLieuFile = await fileDuocChon.arrayBuffer();
+                const pdfGoc = await PDFLib.PDFDocument.load(duLieuFile);
+
+                const tongSoTrang = pdfGoc.getPageCount();
+                if (trangKetThuc >= tongSoTrang) {
+                    theThongBao.innerText = "Trang kết thúc vượt quá tổng số trang của tệp!";
+                    theThongBao.style.color = "#d9534f";
+                    return;
+                }
+
+                // tao doi tuong pdf moi
+                const pdfMoi = await PDFLib.PDFDocument.create();
+
+                // tap hop danh sach cac trang can sao chep
+                const mangTrangCanCopy = [];
+                for (let viTri = trangBatDau; viTri <= trangKetThuc; viTri++) {
+                    mangTrangCanCopy.push(viTri);
+                }
+                
+                // sao chep cac trang tu file goc sang file moi
+                const cacTrangDaCopy = await pdfMoi.copyPages(pdfGoc, mangTrangCanCopy);
+                
+                for (const trang of cacTrangDaCopy) {
+                    pdfMoi.addPage(trang);
+                }
+
+                // luu file pdf moi va tao link tai ve
+                const duLieuPdfMoi = await pdfMoi.save();
+                const doiTuongBlob = new Blob([duLieuPdfMoi], { type: "application/pdf" });
+                const duongDanTaiVe = URL.createObjectURL(doiTuongBlob);
+
+                // tu dong bam nut tai ve
+                const theTaiVe = document.createElement("a");
+                theTaiVe.href = duongDanTaiVe;
+                theTaiVe.download = "tai-lieu-da-tach.pdf";
+                theTaiVe.click();
+
+                theThongBao.innerText = "Tách tệp PDF thành công!";
+                theThongBao.style.color = "#28a745";
+                console.log("da hoan thanh viec tach file pdf");
+                
+            } catch (loi) {
+                console.error("co loi xay ra trong qua trinh xu ly: ", loi);
+                theThongBao.innerText = "Đã xảy ra lỗi khi tách PDF. Vui lòng thử lại.";
+                theThongBao.style.color = "#d9534f";
+            }
+        }
+
+        // gan su kien click cho nut bam
+        const nutBamTach = document.getElementById('nutTach');
+        nutBamTach.addEventListener('click', xuLyTachPdf);
+    </script>
+</body>
+</html>
