@@ -3,121 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ Tách PDF</title>
+    <title>Bộ Công Cụ Xử Lý PDF</title>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
-        .khung-chua { max-width: 450px; margin: auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .khung-chua { max-width: 500px; margin: auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
         label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
-        input[type="number"], input[type="file"] { width: 100%; padding: 8px; box-sizing: border-box; }
-        button { margin-top: 20px; width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        input[type="number"], input[type="file"], select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { margin-top: 20px; width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #0056b3; }
-        #thongBao { margin-top: 15px; font-weight: bold; color: #d9534f; text-align: center; }
+        #thongBao { margin-top: 15px; font-weight: bold; text-align: center; }
+        
+        /* an cac vung chuc nang mac dinh */
+        .vung-chuc-nang { display: none; padding-top: 15px; border-top: 1px solid #eee; margin-top: 15px;}
+        .vung-chuc-nang.hien-thi { display: block; }
     </style>
 </head>
 <body>
 
     <div class="khung-chua">
-        <h2>Phần mềm Tách trang PDF</h2>
+        <h2>Bộ Công Cụ Xử Lý PDF</h2>
         
-        <label for="chonFile">Chọn tệp PDF:</label>
-        <input type="file" id="chonFile" accept="application/pdf">
+        <label for="chonChucNang">Chọn chức năng:</label>
+        <select id="chonChucNang">
+            <option value="tach">1. Tách PDF thành nhiều trang lẻ</option>
+            <option value="gop">2. Gộp nhiều file PDF thành 1</option>
+            <option value="xoa">3. Xóa trang bất kỳ trong PDF</option>
+        </select>
 
-        <label for="trangTu">Từ trang:</label>
-        <input type="number" id="trangTu" min="1" value="1">
+        <div id="vungTach" class="vung-chuc-nang hien-thi">
+            <label for="chonFileTach">Chọn tệp PDF cần tách:</label>
+            <input type="file" id="chonFileTach" accept="application/pdf">
 
-        <label for="trangDen">Đến trang:</label>
-        <input type="number" id="trangDen" min="1" value="1">
+            <label for="trangTu">Từ trang:</label>
+            <input type="number" id="trangTu" min="1" value="1">
 
-        <button id="nutTach">Tách và Tải về từng trang</button>
+            <label for="trangDen">Đến trang:</label>
+            <input type="number" id="trangDen" min="1" value="1">
+
+            <button id="nutTach">Tách và Tải về từng trang</button>
+        </div>
+
+        <div id="vungGop" class="vung-chuc-nang">
+            <label for="chonFileGop">Chọn các tệp PDF cần gộp (có thể chọn nhiều):</label>
+            <input type="file" id="chonFileGop" accept="application/pdf" multiple>
+
+            <button id="nutGop" style="background-color: #28a745;">Gộp và Tải về tệp mới</button>
+        </div>
+
+        <div id="vungXoa" class="vung-chuc-nang">
+            <label for="chonFileXoa">Chọn tệp PDF cần xử lý:</label>
+            <input type="file" id="chonFileXoa" accept="application/pdf">
+
+            <label for="trangXoa">Số thứ tự trang cần xóa:</label>
+            <input type="number" id="trangXoa" min="1" value="1" placeholder="Ví dụ: Nhập 2 để xóa trang số 2">
+
+            <button id="nutXoa" style="background-color: #dc3545;">Xóa trang và Tải về</button>
+        </div>
+
         <p id="thongBao"></p>
     </div>
 
     <script>
-        // ham tam dung de tranh trinh duyet chan tai ve nhieu file
+        // --- PHAN QUAN LY GIAO DIEN ---
+        const oChonChucNang = document.getElementById('chonChucNang');
+        const vungTach = document.getElementById('vungTach');
+        const vungGop = document.getElementById('vungGop');
+        const vungXoa = document.getElementById('vungXoa');
+        const theThongBao = document.getElementById('thongBao');
+
+        // su kien chuyen doi giua cac chuc nang
+        oChonChucNang.addEventListener('change', function() {
+            // an tat ca cac vung
+            vungTach.classList.remove('hien-thi');
+            vungGop.classList.remove('hien-thi');
+            vungXoa.classList.remove('hien-thi');
+            theThongBao.innerText = ""; // xoa thong bao cu
+            
+            // hien thi vung tuong ung
+            if (this.value === 'tach') vungTach.classList.add('hien-thi');
+            if (this.value === 'gop') vungGop.classList.add('hien-thi');
+            if (this.value === 'xoa') vungXoa.classList.add('hien-thi');
+        });
+
+        // --- CAC HAM HO TRO CHUNG ---
         const tamDung = (thoiGian) => new Promise(resolve => setTimeout(resolve, thoiGian));
 
-        // ham xu ly tach file pdf chinh
+        function hienThiThongBao(noiDung, loai) {
+            theThongBao.innerText = noiDung;
+            if (loai === 'loi') theThongBao.style.color = "#d9534f";
+            if (loai === 'tien-trinh') theThongBao.style.color = "#007bff";
+            if (loai === 'thanh-cong') theThongBao.style.color = "#28a745";
+        }
+
+        function taiXuongFile(duLieuUint8Array, tenFile) {
+            const doiTuongBlob = new Blob([duLieuUint8Array], { type: "application/pdf" });
+            const duongDanTaiVe = URL.createObjectURL(doiTuongBlob);
+            const theTaiVe = document.createElement("a");
+            theTaiVe.href = duongDanTaiVe;
+            theTaiVe.download = tenFile;
+            theTaiVe.click();
+            URL.revokeObjectURL(duongDanTaiVe);
+        }
+
+        // --- CHUC NANG 1: TACH PDF ---
         async function xuLyTachPdf() {
-            const theInputFile = document.getElementById('chonFile');
+            const fileInput = document.getElementById('chonFileTach');
             const oNhapTrangTu = document.getElementById('trangTu');
             const oNhapTrangDen = document.getElementById('trangDen');
-            const theThongBao = document.getElementById('thongBao');
 
-            // kiem tra xem nguoi dung da chon file chua
-            if (theInputFile.files.length === 0) {
-                theThongBao.innerText = "Vui lòng chọn tệp PDF trước!";
-                theThongBao.style.color = "#d9534f";
-                return;
-            }
+            if (fileInput.files.length === 0) return hienThiThongBao("Vui lòng chọn tệp PDF cần tách!", "loi");
 
-            const fileDuocChon = theInputFile.files[0];
-            const trangBatDau = parseInt(oNhapTrangTu.value) - 1; // mang bat dau tu vi tri 0
+            const fileDuocChon = fileInput.files[0];
+            const tenFileGoc = fileDuocChon.name.replace('.pdf', '');
+            const trangBatDau = parseInt(oNhapTrangTu.value) - 1; 
             const trangKetThuc = parseInt(oNhapTrangDen.value) - 1;
 
-            // kiem tra tinh hop le cua so trang
-            if (trangBatDau > trangKetThuc || trangBatDau < 0) {
-                theThongBao.innerText = "Số trang bắt đầu và kết thúc không hợp lệ!";
-                theThongBao.style.color = "#d9534f";
-                return;
-            }
+            if (trangBatDau > trangKetThuc || trangBatDau < 0) return hienThiThongBao("Số trang bắt đầu và kết thúc không hợp lệ!", "loi");
 
             try {
-                theThongBao.innerText = "Đang xử lý và tải về từng trang...";
-                theThongBao.style.color = "#007bff";
-
-                // doc du lieu tu file nguoi dung tai len
+                hienThiThongBao("Đang xử lý và tải về từng trang...", "tien-trinh");
                 const duLieuFile = await fileDuocChon.arrayBuffer();
                 const pdfGoc = await PDFLib.PDFDocument.load(duLieuFile);
 
-                const tongSoTrang = pdfGoc.getPageCount();
-                if (trangKetThuc >= tongSoTrang) {
-                    theThongBao.innerText = "Trang kết thúc vượt quá tổng số trang của tệp!";
-                    theThongBao.style.color = "#d9534f";
-                    return;
-                }
+                if (trangKetThuc >= pdfGoc.getPageCount()) return hienThiThongBao("Trang kết thúc vượt quá tổng số trang!", "loi");
 
-                // lap qua tung trang de tao file rieng biet
                 for (let viTri = trangBatDau; viTri <= trangKetThuc; viTri++) {
-                    // tao doi tuong pdf moi cho tung trang
                     const pdfMoi = await PDFLib.PDFDocument.create();
-                    
-                    // sao chep 1 trang tu file goc sang file moi
                     const [trangDaCopy] = await pdfMoi.copyPages(pdfGoc, [viTri]);
                     pdfMoi.addPage(trangDaCopy);
 
-                    // luu file pdf moi va tao link tai ve
                     const duLieuPdfMoi = await pdfMoi.save();
-                    const doiTuongBlob = new Blob([duLieuPdfMoi], { type: "application/pdf" });
-                    const duongDanTaiVe = URL.createObjectURL(doiTuongBlob);
-
-                    // tu dong bam nut tai ve
-                    const theTaiVe = document.createElement("a");
-                    theTaiVe.href = duongDanTaiVe;
-                    theTaiVe.download = `trang-${viTri + 1}.pdf`; // dat ten file theo so trang thuc te
-                    theTaiVe.click();
-
-                    // don dep bo nho URL
-                    URL.revokeObjectURL(duongDanTaiVe);
-
-                    // tam dung 500ms de trinh duyet khong chan tai ve nhieu file cung luc
-                    await tamDung(500);
+                    taiXuongFile(duLieuPdfMoi, `${tenFileGoc}_trang_${viTri + 1}.pdf`);
+                    await tamDung(500); // tranh trinh duyet chan tai ve
                 }
-
-                theThongBao.innerText = "Đã tách và tải về các trang thành công!";
-                theThongBao.style.color = "#28a745";
-                console.log("da hoan thanh viec tach cac file pdf rieng le");
-                
+                hienThiThongBao("Đã tách và tải về các trang thành công!", "thanh-cong");
             } catch (loi) {
-                console.error("co loi xay ra trong qua trinh xu ly: ", loi);
-                theThongBao.innerText = "Đã xảy ra lỗi khi tách PDF. Vui lòng thử lại.";
-                theThongBao.style.color = "#d9534f";
+                console.error(loi);
+                hienThiThongBao("Đã xảy ra lỗi khi tách PDF.", "loi");
             }
         }
 
-        // gan su kien click cho nut bam
-        const nutBamTach = document.getElementById('nutTach');
-        nutBamTach.addEventListener('click', xuLyTachPdf);
+        // --- CHUC NANG 2: GOP PDF ---
+        async function xuLyGopPdf() {
+            const danhSachFile = document.getElementById('chonFileGop').files;
+
+            if (danhSachFile.length < 2) return hienThiThongBao("Vui lòng chọn ít nhất 2 tệp PDF để gộp!", "loi");
+
+            try {
+                hienThiThongBao("Đang tiến hành gộp các tệp PDF...", "tien-trinh");
+                const pdfMoi = await PDFLib.PDFDocument.create();
+
+                // lap qua tung file nguoi dung da chon
+                for (let i = 0; i < danhSachFile.length; i++) {
+                    const duLieuFile = await danhSachFile[i].arrayBuffer();
+                    const pdfTam = await PDFLib.PDFDocument.load(duLieuFile);
+                    
+                    // lay tat ca cac trang cua file hien tai
+                    const tongSoTrang = pdfTam.getPageCount();
+                    const mangChiSoTrang = Array.from({ length: tongSoTrang }, (_, index) => index);
+                    
+                    // copy va dan vao file moi
+                    const cacTrangDaCopy = await pdfMoi.copyPages(pdfTam, mangChiSoTrang);
+                    cacTrangDaCopy.forEach(trang => pdfMoi.addPage(trang));
+                }
+
+                const duLieuPdfMoi = await pdfMoi.save();
+                taiXuongFile(duLieuPdfMoi, "tai_lieu_da_gop.pdf");
+                hienThiThongBao("Đã gộp PDF thành công!", "thanh-cong");
+
+            } catch (loi) {
+                console.error(loi);
+                hienThiThongBao("Đã xảy ra lỗi khi gộp PDF.", "loi");
+            }
+        }
+
+        // --- CHUC NANG 3: XOA TRANG PDF ---
+        async function xuLyXoaTrangPdf() {
+            const fileInput = document.getElementById('chonFileXoa');
+            const oNhapTrangXoa = document.getElementById('trangXoa');
+
+            if (fileInput.files.length === 0) return hienThiThongBao("Vui lòng chọn tệp PDF cần xử lý!", "loi");
+
+            const fileDuocChon = fileInput.files[0];
+            const tenFileGoc = fileDuocChon.name.replace('.pdf', '');
+            const viTriCanXoa = parseInt(oNhapTrangXoa.value) - 1; // mang bat dau tu 0
+
+            if (viTriCanXoa < 0) return hienThiThongBao("Số trang cần xóa không hợp lệ!", "loi");
+
+            try {
+                hienThiThongBao("Đang tiến hành xóa trang...", "tien-trinh");
+                const duLieuFile = await fileDuocChon.arrayBuffer();
+                const pdfGoc = await PDFLib.PDFDocument.load(duLieuFile);
+
+                if (viTriCanXoa >= pdfGoc.getPageCount()) return hienThiThongBao("Số trang cần xóa vượt quá tổng số trang của tệp!", "loi");
+
+                // xoa trang tai vi tri da chi dinh
+                pdfGoc.removePage(viTriCanXoa);
+
+                const duLieuPdfMoi = await pdfGoc.save();
+                taiXuongFile(duLieuPdfMoi, `${tenFileGoc}_da_xoa_trang_${viTriCanXoa + 1}.pdf`);
+                hienThiThongBao(`Đã xóa thành công trang ${viTriCanXoa + 1}!`, "thanh-cong");
+
+            } catch (loi) {
+                console.error(loi);
+                hienThiThongBao("Đã xảy ra lỗi khi xóa trang PDF.", "loi");
+            }
+        }
+
+        // --- GAN SU KIEN CHO CAC NUT BAM ---
+        document.getElementById('nutTach').addEventListener('click', xuLyTachPdf);
+        document.getElementById('nutGop').addEventListener('click', xuLyGopPdf);
+        document.getElementById('nutXoa').addEventListener('click', xuLyXoaTrangPdf);
+
     </script>
 </body>
 </html>
