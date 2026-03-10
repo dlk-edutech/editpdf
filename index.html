@@ -29,11 +29,14 @@
         <label for="trangDen">Đến trang:</label>
         <input type="number" id="trangDen" min="1" value="1">
 
-        <button id="nutTach">Tách và Tải về</button>
+        <button id="nutTach">Tách và Tải về từng trang</button>
         <p id="thongBao"></p>
     </div>
 
     <script>
+        // ham tam dung de tranh trinh duyet chan tai ve nhieu file
+        const tamDung = (thoiGian) => new Promise(resolve => setTimeout(resolve, thoiGian));
+
         // ham xu ly tach file pdf chinh
         async function xuLyTachPdf() {
             const theInputFile = document.getElementById('chonFile');
@@ -60,7 +63,7 @@
             }
 
             try {
-                theThongBao.innerText = "Đang xử lý dữ liệu...";
+                theThongBao.innerText = "Đang xử lý và tải về từng trang...";
                 theThongBao.style.color = "#007bff";
 
                 // doc du lieu tu file nguoi dung tai len
@@ -74,36 +77,36 @@
                     return;
                 }
 
-                // tao doi tuong pdf moi
-                const pdfMoi = await PDFLib.PDFDocument.create();
-
-                // tap hop danh sach cac trang can sao chep
-                const mangTrangCanCopy = [];
+                // lap qua tung trang de tao file rieng biet
                 for (let viTri = trangBatDau; viTri <= trangKetThuc; viTri++) {
-                    mangTrangCanCopy.push(viTri);
+                    // tao doi tuong pdf moi cho tung trang
+                    const pdfMoi = await PDFLib.PDFDocument.create();
+                    
+                    // sao chep 1 trang tu file goc sang file moi
+                    const [trangDaCopy] = await pdfMoi.copyPages(pdfGoc, [viTri]);
+                    pdfMoi.addPage(trangDaCopy);
+
+                    // luu file pdf moi va tao link tai ve
+                    const duLieuPdfMoi = await pdfMoi.save();
+                    const doiTuongBlob = new Blob([duLieuPdfMoi], { type: "application/pdf" });
+                    const duongDanTaiVe = URL.createObjectURL(doiTuongBlob);
+
+                    // tu dong bam nut tai ve
+                    const theTaiVe = document.createElement("a");
+                    theTaiVe.href = duongDanTaiVe;
+                    theTaiVe.download = `trang-${viTri + 1}.pdf`; // dat ten file theo so trang thuc te
+                    theTaiVe.click();
+
+                    // don dep bo nho URL
+                    URL.revokeObjectURL(duongDanTaiVe);
+
+                    // tam dung 500ms de trinh duyet khong chan tai ve nhieu file cung luc
+                    await tamDung(500);
                 }
-                
-                // sao chep cac trang tu file goc sang file moi
-                const cacTrangDaCopy = await pdfMoi.copyPages(pdfGoc, mangTrangCanCopy);
-                
-                for (const trang of cacTrangDaCopy) {
-                    pdfMoi.addPage(trang);
-                }
 
-                // luu file pdf moi va tao link tai ve
-                const duLieuPdfMoi = await pdfMoi.save();
-                const doiTuongBlob = new Blob([duLieuPdfMoi], { type: "application/pdf" });
-                const duongDanTaiVe = URL.createObjectURL(doiTuongBlob);
-
-                // tu dong bam nut tai ve
-                const theTaiVe = document.createElement("a");
-                theTaiVe.href = duongDanTaiVe;
-                theTaiVe.download = "tai-lieu-da-tach.pdf";
-                theTaiVe.click();
-
-                theThongBao.innerText = "Tách tệp PDF thành công!";
+                theThongBao.innerText = "Đã tách và tải về các trang thành công!";
                 theThongBao.style.color = "#28a745";
-                console.log("da hoan thanh viec tach file pdf");
+                console.log("da hoan thanh viec tach cac file pdf rieng le");
                 
             } catch (loi) {
                 console.error("co loi xay ra trong qua trinh xu ly: ", loi);
