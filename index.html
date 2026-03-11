@@ -248,7 +248,7 @@
 
             try {
                 // thong bao qua trinh nay ton nhieu thoi gian hon do phai ve lai tung trang
-                hienThiThongBao("Đang chuyển đổi thành bản scan (có thể mất vài chục giây tùy dung lượng)...", "tien-trinh");
+                hienThiThongBao("Đang chuyển đổi thành bản scan chất lượng cao (có thể mất vài chục giây)...", "tien-trinh");
 
                 // dung pdf.js de doc du lieu hinh anh
                 const duLieuFile = await fileDuocChon.arrayBuffer();
@@ -261,7 +261,8 @@
                 // lap qua tung trang, ve ra canvas roi xuat thanh anh jpeg
                 for (let i = 1; i <= tongSoTrang; i++) {
                     const trangPdfJs = await taiLieuPdfJs.getPage(i);
-                    const mucDoPhongTo = 1.5; // phong to 1.5 lan de net chu khong bi qua mo
+                    // DANG DIEU CHINH: tang do phan giai len gap 3 lan so voi kich thuoc goc
+                    const mucDoPhongTo = 3.0; 
                     const khungHinh = trangPdfJs.getViewport({ scale: mucDoPhongTo });
 
                     // tao the canvas ao trong the nho
@@ -274,13 +275,13 @@
                     const thaoTacVe = { canvasContext: nguoiVeCanvas, viewport: khungHinh };
                     await trangPdfJs.render(thaoTacVe).promise;
 
-                    // xuat canvas thanh anh jpeg voi chat luong 0.7 (hoi nen mot chut giong scan that)
-                    const duLieuAnh = theCanvas.toDataURL('image/jpeg', 0.7);
+                    // DANG DIEU CHINH: xuat canvas thanh anh jpeg voi chat luong 95% cuc net
+                    const duLieuAnh = theCanvas.toDataURL('image/jpeg', 0.95);
 
                     // nhung buc anh vao pdf-lib
                     const anhDuocNhung = await pdfMoi.embedJpg(duLieuAnh);
                     
-                    // thu nho anh ve lai kich thuoc goc de file khong bi hinh to gap doi
+                    // thu nho anh ve lai kich thuoc goc de giay khong bi khong lo
                     const kichThuocAnh = anhDuocNhung.scale(1 / mucDoPhongTo);
                     const trangMoi = pdfMoi.addPage([kichThuocAnh.width, kichThuocAnh.height]);
                     
