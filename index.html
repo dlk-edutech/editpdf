@@ -269,7 +269,7 @@
                 for (let i = 1; i <= tongSoTrang; i++) {
                     const trangPdfJs = await taiLieuPdfJs.getPage(i);
                     // DANG DIEU CHINH: tang do phan giai len gap 3 lan so voi kich thuoc goc
-                    const mucDoPhongTo = 3.0; 
+                    const mucDoPhongTo = 5.0; 
                     const khungHinh = trangPdfJs.getViewport({ scale: mucDoPhongTo });
 
                     // tao the canvas ao trong the nho
