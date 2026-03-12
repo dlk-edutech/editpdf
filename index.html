@@ -15,7 +15,7 @@
         .khung-chua { max-width: 500px; margin: auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #333; }
         label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
-        input[type="number"], input[type="file"], select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="number"], input[type="file"], input[type="text"], select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         button { margin-top: 20px; width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #0056b3; }
         #thongBao { margin-top: 15px; font-weight: bold; text-align: center; }
@@ -23,6 +23,9 @@
         /* an cac vung chuc nang mac dinh */
         .vung-chuc-nang { display: none; padding-top: 15px; border-top: 1px solid #eee; margin-top: 15px;}
         .vung-chuc-nang.hien-thi { display: block; }
+
+        /* style cho phan thong tin file xem truoc */
+        .thong-tin-file { font-size: 14px; margin-top: 5px; font-style: italic; color: #555; }
 
         /* style cho phan ban quyen */
         .ban-quyen { margin-top: 25px; text-align: center; font-size: 13px; color: #777; border-top: 1px solid #eee; padding-top: 15px; }
@@ -37,13 +40,14 @@
         <select id="chonChucNang">
             <option value="tach">1. Tách PDF thành nhiều trang lẻ</option>
             <option value="gop">2. Gộp nhiều file PDF thành 1</option>
-            <option value="xoa">3. Xóa nhiều trang liên tục trong PDF</option>
+            <option value="xoa">3. Xóa các trang/cụm trang tùy chọn</option>
             <option value="scan">4. Chuyển PDF thành bản scan (ảnh)</option>
         </select>
 
         <div id="vungTach" class="vung-chuc-nang hien-thi">
             <label for="chonFileTach">Chọn tệp PDF cần tách:</label>
             <input type="file" id="chonFileTach" accept="application/pdf">
+            <div id="thongTinFileTach" class="thong-tin-file"></div>
 
             <label for="trangTu">Từ trang:</label>
             <input type="number" id="trangTu" min="1" value="1">
@@ -57,6 +61,7 @@
         <div id="vungGop" class="vung-chuc-nang">
             <label for="chonFileGop">Chọn các tệp PDF cần gộp (có thể chọn nhiều):</label>
             <input type="file" id="chonFileGop" accept="application/pdf" multiple>
+            <div id="thongTinFileGop" class="thong-tin-file"></div>
 
             <button id="nutGop" style="background-color: #28a745;">Gộp và Tải về tệp mới</button>
         </div>
@@ -64,12 +69,10 @@
         <div id="vungXoa" class="vung-chuc-nang">
             <label for="chonFileXoa">Chọn tệp PDF cần xử lý:</label>
             <input type="file" id="chonFileXoa" accept="application/pdf">
+            <div id="thongTinFileXoa" class="thong-tin-file"></div>
 
-            <label for="trangTuXoa">Xóa từ trang:</label>
-            <input type="number" id="trangTuXoa" min="1" value="1">
-
-            <label for="trangDenXoa">Xóa đến trang:</label>
-            <input type="number" id="trangDenXoa" min="1" value="1">
+            <label for="trangCanXoa">Nhập các trang/khoảng trang cần xóa (cách nhau bởi dấu phẩy):</label>
+            <input type="text" id="trangCanXoa" placeholder="Ví dụ: 1-3, 5, 7-9">
 
             <button id="nutXoa" style="background-color: #dc3545;">Xóa trang và Tải về</button>
         </div>
@@ -77,6 +80,14 @@
         <div id="vungScan" class="vung-chuc-nang">
             <label for="chonFileScan">Chọn tệp PDF cần chuyển thành bản scan:</label>
             <input type="file" id="chonFileScan" accept="application/pdf">
+            <div id="thongTinFileScan" class="thong-tin-file"></div>
+
+            <label for="chonChatLuongScan">Chọn chất lượng scan:</label>
+            <select id="chonChatLuongScan">
+                <option value="nhe">Nhẹ (Xử lý nhanh, dung lượng thấp)</option>
+                <option value="vua" selected>Vừa (Cân bằng, khuyên dùng)</option>
+                <option value="rat_net">Rất nét (Dung lượng cao, xử lý chậm)</option>
+            </select>
 
             <button id="nutScan" style="background-color: #fd7e14;">Chuyển đổi và Tải về</button>
         </div>
@@ -133,6 +144,48 @@
             theTaiVe.click();
             URL.revokeObjectURL(duongDanTaiVe);
         }
+
+        // ham cap nhat thong tin file khi nguoi dung tai len
+        async function capNhatThongTinFile(suKien, idHienThi) {
+            const theInputFile = suKien.target;
+            const theHienThi = document.getElementById(idHienThi);
+            
+            if (theInputFile.files.length === 0) {
+                theHienThi.innerText = "";
+                return;
+            }
+
+            // neu la chuc nang gop (chon nhieu file)
+            if (theInputFile.multiple) {
+                theHienThi.innerText = `Đã chọn ${theInputFile.files.length} tệp.`;
+                theHienThi.style.color = "#28a745";
+            } else {
+                // neu la cac chuc nang chon 1 file
+                const fileDuocChon = theInputFile.files[0];
+                try {
+                    theHienThi.innerText = "Đang đọc thông tin tệp...";
+                    theHienThi.style.color = "#007bff";
+                    
+                    const duLieuFile = await fileDuocChon.arrayBuffer();
+                    const pdfGoc = await PDFLib.PDFDocument.load(duLieuFile);
+                    const tongSoTrang = pdfGoc.getPageCount();
+                    
+                    theHienThi.innerText = `Tệp: ${fileDuocChon.name} - Tổng số trang: ${tongSoTrang}`;
+                    theHienThi.style.color = "#28a745";
+                } catch (loi) {
+                    console.error("Loi doc file: ", loi);
+                    theHienThi.innerText = "Không thể đọc thông tin tệp PDF này.";
+                    theHienThi.style.color = "#d9534f";
+                }
+            }
+        }
+
+        // gan su kien doc thong tin file cho 4 o input
+        document.getElementById('chonFileTach').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileTach'));
+        document.getElementById('chonFileGop').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileGop'));
+        document.getElementById('chonFileXoa').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileXoa'));
+        document.getElementById('chonFileScan').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileScan'));
+
 
         // --- CHUC NANG 1: TACH PDF ---
         async function xuLyTachPdf() {
@@ -209,35 +262,70 @@
         // --- CHUC NANG 3: XOA TRANG PDF ---
         async function xuLyXoaTrangPdf() {
             const fileInput = document.getElementById('chonFileXoa');
-            const oNhapTrangTuXoa = document.getElementById('trangTuXoa');
-            const oNhapTrangDenXoa = document.getElementById('trangDenXoa');
+            const chuoiTrangXoa = document.getElementById('trangCanXoa').value.trim();
 
             if (fileInput.files.length === 0) return hienThiThongBao("Vui lòng chọn tệp PDF cần xử lý!", "loi");
+            if (chuoiTrangXoa === "") return hienThiThongBao("Vui lòng nhập các trang cần xóa!", "loi");
 
             const fileDuocChon = fileInput.files[0];
             const tenFileGoc = fileDuocChon.name.replace('.pdf', '');
-            const trangBatDauXoa = parseInt(oNhapTrangTuXoa.value) - 1; // mang bat dau tu 0
-            const trangKetThucXoa = parseInt(oNhapTrangDenXoa.value) - 1;
-
-            if (trangBatDauXoa > trangKetThucXoa || trangBatDauXoa < 0) return hienThiThongBao("Số trang bắt đầu và kết thúc không hợp lệ!", "loi");
 
             try {
-                hienThiThongBao("Đang tiến hành xóa trang...", "tien-trinh");
+                hienThiThongBao("Đang tiến hành phân tích và xóa trang...", "tien-trinh");
                 const duLieuFile = await fileDuocChon.arrayBuffer();
                 const pdfGoc = await PDFLib.PDFDocument.load(duLieuFile);
                 const tongSoTrang = pdfGoc.getPageCount();
 
-                if (trangKetThucXoa >= tongSoTrang) return hienThiThongBao("Trang kết thúc vượt quá tổng số trang của tệp!", "loi");
+                // dung Set de tu dong loai bo cac trang trung lap neu nguoi dung nhap trung
+                let tapHopTrangCanXoa = new Set();
+                const cacPhanTu = chuoiTrangXoa.split(',');
+                
+                for (let i = 0; i < cacPhanTu.length; i++) {
+                    const phanTu = cacPhanTu[i].trim();
+                    if (phanTu === "") continue;
 
-                // xoa trang tu cuoi len dau de khong lam sai lech chi so cac trang con lai
-                for (let viTri = trangKetThucXoa; viTri >= trangBatDauXoa; viTri--) {
-                    pdfGoc.removePage(viTri);
+                    if (phanTu.includes('-')) {
+                        // xu ly truong hop nguoi dung nhap khoang trang (vd: 1-5)
+                        const khoang = phanTu.split('-');
+                        if (khoang.length === 2) {
+                            const batDau = parseInt(khoang[0].trim());
+                            const ketThuc = parseInt(khoang[1].trim());
+                            
+                            if (!isNaN(batDau) && !isNaN(ketThuc) && batDau <= ketThuc) {
+                                for (let j = batDau; j <= ketThuc; j++) {
+                                    tapHopTrangCanXoa.add(j - 1); // chuyen ve index bat dau tu 0
+                                }
+                            } else {
+                                return hienThiThongBao(`Khoảng trang "${phanTu}" không hợp lệ!`, "loi");
+                            }
+                        }
+                    } else {
+                        // xu ly truong hop nguoi dung nhap 1 trang le (vd: 7)
+                        const trang = parseInt(phanTu);
+                        if (!isNaN(trang)) {
+                            tapHopTrangCanXoa.add(trang - 1);
+                        } else {
+                            return hienThiThongBao(`Trang "${phanTu}" không hợp lệ!`, "loi");
+                        }
+                    }
+                }
+
+                // chuyen Set thanh mang, loc cac trang nam trong gioi han hop le, va sap xep giam dan
+                const mangTrangCanXoa = Array.from(tapHopTrangCanXoa)
+                    .filter(trang => trang >= 0 && trang < tongSoTrang)
+                    .sort((a, b) => b - a); // sap xep tu lon den be de xoa tu cuoi len dau
+
+                if (mangTrangCanXoa.length === 0) return hienThiThongBao("Không có trang hợp lệ nào để xóa!", "loi");
+                if (mangTrangCanXoa.length === tongSoTrang) return hienThiThongBao("Không thể xóa toàn bộ tất cả các trang!", "loi");
+
+                // thuc hien xoa trang
+                for (let i = 0; i < mangTrangCanXoa.length; i++) {
+                    pdfGoc.removePage(mangTrangCanXoa[i]);
                 }
 
                 const duLieuPdfMoi = await pdfGoc.save();
-                // hien thi file luu ve voi ten ro rang hon
-                taiXuongFile(duLieuPdfMoi, `${tenFileGoc}_da_xoa_tu_${trangBatDauXoa + 1}_den_${trangKetThucXoa + 1}.pdf`);
-                hienThiThongBao(`Đã xóa thành công từ trang ${trangBatDauXoa + 1} đến trang ${trangKetThucXoa + 1}!`, "thanh-cong");
+                taiXuongFile(duLieuPdfMoi, `${tenFileGoc}_da_xoa_trang.pdf`);
+                hienThiThongBao("Đã xóa các trang thành công!", "thanh-cong");
 
             } catch (loi) {
                 console.error(loi);
@@ -248,14 +336,28 @@
         // --- CHUC NANG 4: CHUYEN THANH BAN SCAN ---
         async function xuLyChuyenScanPdf() {
             const fileInput = document.getElementById('chonFileScan');
+            const luaChonChatLuong = document.getElementById('chonChatLuongScan').value;
+            
             if (fileInput.files.length === 0) return hienThiThongBao("Vui lòng chọn tệp PDF cần chuyển đổi!", "loi");
 
             const fileDuocChon = fileInput.files[0];
             const tenFileGoc = fileDuocChon.name.replace('.pdf', '');
 
+            // thiet lap thong so dua tren lua chon cua nguoi dung
+            let mucDoPhongTo = 3.0; // mac dinh la Vua
+            let chatLuongAnh = 0.95; 
+
+            if (luaChonChatLuong === 'nhe') {
+                mucDoPhongTo = 1.5;
+                chatLuongAnh = 0.7;
+            } else if (luaChonChatLuong === 'rat_net') {
+                mucDoPhongTo = 5.0;
+                chatLuongAnh = 1.0;
+            }
+
             try {
                 // thong bao qua trinh nay ton nhieu thoi gian hon do phai ve lai tung trang
-                hienThiThongBao("Đang chuyển đổi thành bản scan chất lượng cao (có thể mất vài chục giây)...", "tien-trinh");
+                hienThiThongBao("Đang chuyển đổi thành bản scan (có thể mất vài chục giây tùy dung lượng và chất lượng)...", "tien-trinh");
 
                 // dung pdf.js de doc du lieu hinh anh
                 const duLieuFile = await fileDuocChon.arrayBuffer();
@@ -268,8 +370,6 @@
                 // lap qua tung trang, ve ra canvas roi xuat thanh anh jpeg
                 for (let i = 1; i <= tongSoTrang; i++) {
                     const trangPdfJs = await taiLieuPdfJs.getPage(i);
-                    // DANG DIEU CHINH: tang do phan giai len gap 3 lan so voi kich thuoc goc
-                    const mucDoPhongTo = 5.0; 
                     const khungHinh = trangPdfJs.getViewport({ scale: mucDoPhongTo });
 
                     // tao the canvas ao trong the nho
@@ -282,8 +382,8 @@
                     const thaoTacVe = { canvasContext: nguoiVeCanvas, viewport: khungHinh };
                     await trangPdfJs.render(thaoTacVe).promise;
 
-                    // DANG DIEU CHINH: xuat canvas thanh anh jpeg voi chat luong 100% cuc net
-                    const duLieuAnh = theCanvas.toDataURL('image/jpeg', 1.0);
+                    // xuat canvas thanh anh jpeg voi chat luong tuong ung
+                    const duLieuAnh = theCanvas.toDataURL('image/jpeg', chatLuongAnh);
 
                     // nhung buc anh vao pdf-lib
                     const anhDuocNhung = await pdfMoi.embedJpg(duLieuAnh);
