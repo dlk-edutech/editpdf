@@ -282,8 +282,8 @@
                     const thaoTacVe = { canvasContext: nguoiVeCanvas, viewport: khungHinh };
                     await trangPdfJs.render(thaoTacVe).promise;
 
-                    // DANG DIEU CHINH: xuat canvas thanh anh jpeg voi chat luong 200% cuc net
-                    const duLieuAnh = theCanvas.toDataURL('image/jpeg', 2.0);
+                    // DANG DIEU CHINH: xuat canvas thanh anh jpeg voi chat luong 100% cuc net
+                    const duLieuAnh = theCanvas.toDataURL('image/jpeg', 1.0);
 
                     // nhung buc anh vao pdf-lib
                     const anhDuocNhung = await pdfMoi.embedJpg(duLieuAnh);
