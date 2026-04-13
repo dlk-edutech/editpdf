@@ -32,6 +32,9 @@
 
         /* style cho phan ban quyen */
         .ban-quyen { margin-top: 25px; text-align: center; font-size: 13px; color: #777; border-top: 1px solid #eee; padding-top: 15px; }
+        
+        /* style cho vung chua HTML an ma khong dung display:none de tranh loi canvas */
+        #vungChuaHtmlAn { position: absolute; top: -9999px; left: -9999px; width: 800px; z-index: -1; }
     </style>
 </head>
 <body>
@@ -103,7 +106,6 @@
             <span class="luu-y-nho">*Lưu ý: Công cụ trích xuất nội dung văn bản và hình ảnh để tạo PDF, một số định dạng layout quá phức tạp của Word có thể không được giữ nguyên 100%.</span>
 
             <button id="nutWord2Pdf" style="background-color: #17a2b8;">Chuyển đổi và Tải về PDF</button>
-            <div id="vungChuaHtmlAn" style="display:none;"></div>
         </div>
 
         <p id="thongBao"></p>
@@ -112,6 +114,8 @@
             Dlk Edu Tech - Phát triển bởi tranhongdan@tranphudlk.edu.vn
         </div>
     </div>
+    
+    <div id="vungChuaHtmlAn"></div>
 
     <script>
         // --- PHAN QUAN LY GIAO DIEN ---
@@ -447,7 +451,7 @@
                     // Su dung mammoth de doc file docx va bien dich ra HTML
                     const ketQuaMammoth = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
                     
-                    // Dua HTML vao vung an kem theo css co ban de PDF de doc hon (nhu font Times New Roman)
+                    // Dua HTML vao vung an kem theo css co ban de PDF de doc hon
                     vungChuaHtmlAn.innerHTML = `<div style="padding: 20px; font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.5; color: black; text-align: justify;">${ketQuaMammoth.value}</div>`;
 
                     // Cau hinh thong so cho html2pdf
