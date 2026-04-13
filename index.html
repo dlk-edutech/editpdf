@@ -6,8 +6,6 @@
     <title>Bộ Công Cụ Xử Lý PDF</title>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         // cau hinh worker cho pdf.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
@@ -28,22 +26,9 @@
 
         /* style cho phan thong tin file xem truoc */
         .thong-tin-file { font-size: 14px; margin-top: 5px; font-style: italic; color: #555; }
-        .luu-y-nho { font-size: 12px; color: #888; font-style: italic; margin-top: 8px; display: block; line-height: 1.4; }
 
         /* style cho phan ban quyen */
         .ban-quyen { margin-top: 25px; text-align: center; font-size: 13px; color: #777; border-top: 1px solid #eee; padding-top: 15px; }
-        
-        /* FIX: setup vung HTML an mot cach triet de de html2canvas khong bi chup khoang trang */
-        #vungChuaHtmlAn { 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 794px; /* chieu rong chuan A4 de dan trang chinh xac */
-            opacity: 0; /* lam mo hoan toan thay vi dung display:none */
-            z-index: -1000; 
-            pointer-events: none; 
-            background-color: #ffffff; /* bat buoc co nen trang */
-        }
     </style>
 </head>
 <body>
@@ -57,7 +42,6 @@
             <option value="gop">2. Gộp nhiều file PDF thành 1</option>
             <option value="xoa">3. Xóa các trang/cụm trang tùy chọn</option>
             <option value="scan">4. Chuyển PDF thành bản scan (ảnh)</option>
-            <option value="word2pdf">5. Chuyển nhiều file Word thành PDF</option>
         </select>
 
         <div id="vungTach" class="vung-chuc-nang hien-thi">
@@ -108,23 +92,12 @@
             <button id="nutScan" style="background-color: #fd7e14;">Chuyển đổi và Tải về</button>
         </div>
 
-        <div id="vungWord2Pdf" class="vung-chuc-nang">
-            <label for="chonFileWord">Chọn các tệp Word (.docx) cần chuyển (có thể chọn nhiều):</label>
-            <input type="file" id="chonFileWord" accept=".docx" multiple>
-            <div id="thongTinFileWord" class="thong-tin-file"></div>
-            <span class="luu-y-nho">*Lưu ý: Công cụ trích xuất nội dung văn bản và hình ảnh để tạo PDF, một số định dạng layout quá phức tạp của Word có thể không được giữ nguyên 100%.</span>
-
-            <button id="nutWord2Pdf" style="background-color: #17a2b8;">Chuyển đổi và Tải về PDF</button>
-        </div>
-
         <p id="thongBao"></p>
 
         <div class="ban-quyen">
             Dlk Edu Tech - Phát triển bởi tranhongdan@tranphudlk.edu.vn
         </div>
     </div>
-    
-    <div id="vungChuaHtmlAn"></div>
 
     <script>
         // --- PHAN QUAN LY GIAO DIEN ---
@@ -133,7 +106,6 @@
         const vungGop = document.getElementById('vungGop');
         const vungXoa = document.getElementById('vungXoa');
         const vungScan = document.getElementById('vungScan');
-        const vungWord2Pdf = document.getElementById('vungWord2Pdf');
         const theThongBao = document.getElementById('thongBao');
 
         // su kien chuyen doi giua cac chuc nang
@@ -143,7 +115,6 @@
             vungGop.classList.remove('hien-thi');
             vungXoa.classList.remove('hien-thi');
             vungScan.classList.remove('hien-thi');
-            vungWord2Pdf.classList.remove('hien-thi');
             theThongBao.innerText = ""; // xoa thong bao cu
             
             // hien thi vung tuong ung
@@ -151,7 +122,6 @@
             if (this.value === 'gop') vungGop.classList.add('hien-thi');
             if (this.value === 'xoa') vungXoa.classList.add('hien-thi');
             if (this.value === 'scan') vungScan.classList.add('hien-thi');
-            if (this.value === 'word2pdf') vungWord2Pdf.classList.add('hien-thi');
         });
 
         // --- CAC HAM HO TRO CHUNG ---
@@ -185,12 +155,12 @@
                 return;
             }
 
-            // neu la chuc nang chon nhieu file (gop PDF hoac Word sang PDF)
+            // neu la chuc nang gop (chon nhieu file)
             if (theInputFile.multiple) {
                 theHienThi.innerText = `Đã chọn ${theInputFile.files.length} tệp.`;
                 theHienThi.style.color = "#28a745";
             } else {
-                // neu la cac chuc nang chon 1 file PDF
+                // neu la cac chuc nang chon 1 file
                 const fileDuocChon = theInputFile.files[0];
                 try {
                     theHienThi.innerText = "Đang đọc thông tin tệp...";
@@ -210,12 +180,11 @@
             }
         }
 
-        // gan su kien doc thong tin file cho 5 o input
+        // gan su kien doc thong tin file cho 4 o input
         document.getElementById('chonFileTach').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileTach'));
         document.getElementById('chonFileGop').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileGop'));
         document.getElementById('chonFileXoa').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileXoa'));
         document.getElementById('chonFileScan').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileScan'));
-        document.getElementById('chonFileWord').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileWord'));
 
 
         // --- CHUC NANG 1: TACH PDF ---
@@ -441,63 +410,11 @@
             }
         }
 
-        // --- CHUC NANG 5: CHUYEN NHIEU FILE WORD THANH PDF ---
-        async function xuLyWordSangPdf() {
-            const danhSachFile = document.getElementById('chonFileWord').files;
-            if (danhSachFile.length === 0) return hienThiThongBao("Vui lòng chọn ít nhất 1 tệp Word (.docx)!", "loi");
-
-            const vungChuaHtmlAn = document.getElementById('vungChuaHtmlAn');
-
-            try {
-                hienThiThongBao("Đang tiến hành chuyển đổi Word sang PDF. Từng file sẽ được tự động tải xuống...", "tien-trinh");
-
-                for (let i = 0; i < danhSachFile.length; i++) {
-                    const fileGoc = danhSachFile[i];
-                    const tenFile = fileGoc.name.replace(/\.[^/.]+$/, ""); // xoa phan mo rong cua file
-
-                    const arrayBuffer = await fileGoc.arrayBuffer();
-                    
-                    // Su dung mammoth de doc file docx va bien dich ra HTML
-                    const ketQuaMammoth = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-                    
-                    // Dua HTML vao vung an kem theo css co ban de PDF de doc hon
-                    vungChuaHtmlAn.innerHTML = `<div style="padding: 30px; font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.5; color: black; text-align: justify;">${ketQuaMammoth.value}</div>`;
-
-                    // FIX: BUOC CHO QUAN TRONG Nhat! 
-                    // Doi 1 giay de trinh duyet ve xong chu va hinh anh ra DOM truoc khi chup anh
-                    await tamDung(1000); 
-
-                    // Cau hinh thong so cho html2pdf
-                    const tuyChon = {
-                        margin:       15, // can le khoang 1.5cm
-                        filename:     `${tenFile}.pdf`,
-                        image:        { type: 'jpeg', quality: 0.98 },
-                        html2canvas:  { scale: 2, useCORS: true },
-                        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                    };
-
-                    // Thuc thi lenh bien doi HTML ra PDF va luu
-                    await html2pdf().set(tuyChon).from(vungChuaHtmlAn).save();
-                    
-                    // Cho tam 1 giay cho moi file de trinh duyet khong bi chong cheo viec tai ve
-                    await tamDung(1000); 
-                }
-
-                vungChuaHtmlAn.innerHTML = ""; // don dep noi dung
-                hienThiThongBao("Đã hoàn tất chuyển đổi toàn bộ tệp Word sang PDF!", "thanh-cong");
-
-            } catch (loi) {
-                console.error(loi);
-                hienThiThongBao("Đã xảy ra lỗi khi chuyển đổi. Lưu ý: Công cụ chỉ hỗ trợ tệp định dạng .docx.", "loi");
-            }
-        }
-
         // --- GAN SU KIEN CHO CAC NUT BAM ---
         document.getElementById('nutTach').addEventListener('click', xuLyTachPdf);
         document.getElementById('nutGop').addEventListener('click', xuLyGopPdf);
         document.getElementById('nutXoa').addEventListener('click', xuLyXoaTrangPdf);
         document.getElementById('nutScan').addEventListener('click', xuLyChuyenScanPdf);
-        document.getElementById('nutWord2Pdf').addEventListener('click', xuLyWordSangPdf);
 
     </script>
 </body>
