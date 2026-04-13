@@ -33,8 +33,17 @@
         /* style cho phan ban quyen */
         .ban-quyen { margin-top: 25px; text-align: center; font-size: 13px; color: #777; border-top: 1px solid #eee; padding-top: 15px; }
         
-        /* style cho vung chua HTML an ma khong dung display:none de tranh loi canvas */
-        #vungChuaHtmlAn { position: absolute; top: -9999px; left: -9999px; width: 800px; z-index: -1; }
+        /* FIX: setup vung HTML an mot cach triet de de html2canvas khong bi chup khoang trang */
+        #vungChuaHtmlAn { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 794px; /* chieu rong chuan A4 de dan trang chinh xac */
+            opacity: 0; /* lam mo hoan toan thay vi dung display:none */
+            z-index: -1000; 
+            pointer-events: none; 
+            background-color: #ffffff; /* bat buoc co nen trang */
+        }
     </style>
 </head>
 <body>
@@ -452,7 +461,11 @@
                     const ketQuaMammoth = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
                     
                     // Dua HTML vao vung an kem theo css co ban de PDF de doc hon
-                    vungChuaHtmlAn.innerHTML = `<div style="padding: 20px; font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.5; color: black; text-align: justify;">${ketQuaMammoth.value}</div>`;
+                    vungChuaHtmlAn.innerHTML = `<div style="padding: 30px; font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.5; color: black; text-align: justify;">${ketQuaMammoth.value}</div>`;
+
+                    // FIX: BUOC CHO QUAN TRONG Nhat! 
+                    // Doi 1 giay de trinh duyet ve xong chu va hinh anh ra DOM truoc khi chup anh
+                    await tamDung(1000); 
 
                     // Cau hinh thong so cho html2pdf
                     const tuyChon = {
