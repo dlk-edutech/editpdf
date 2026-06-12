@@ -32,7 +32,6 @@
     </style>
 </head>
 <body>
-
     <div class="khung-chua">
         <h2>Bộ Công Cụ Xử Lý PDF</h2>
         
@@ -42,6 +41,7 @@
             <option value="gop">2. Gộp nhiều file PDF thành 1</option>
             <option value="xoa">3. Xóa các trang/cụm trang tùy chọn</option>
             <option value="scan">4. Chuyển PDF thành bản scan (ảnh)</option>
+            <option value="jpg">5. Chuyển PDF thành ảnh (JPG)</option>
         </select>
 
         <div id="vungTach" class="vung-chuc-nang hien-thi">
@@ -92,6 +92,14 @@
             <button id="nutScan" style="background-color: #fd7e14;">Chuyển đổi và Tải về</button>
         </div>
 
+        <div id="vungJpg" class="vung-chuc-nang">
+            <label for="chonFileJpg">Chọn tệp PDF cần chuyển thành ảnh (JPG):</label>
+            <input type="file" id="chonFileJpg" accept="application/pdf">
+            <div id="thongTinFileJpg" class="thong-tin-file"></div>
+
+            <button id="nutJpg" style="background-color: #17a2b8;">Chuyển đổi và Tải về (từng ảnh)</button>
+        </div>
+
         <p id="thongBao"></p>
 
         <div class="ban-quyen">
@@ -106,6 +114,7 @@
         const vungGop = document.getElementById('vungGop');
         const vungXoa = document.getElementById('vungXoa');
         const vungScan = document.getElementById('vungScan');
+        const vungJpg = document.getElementById('vungJpg');
         const theThongBao = document.getElementById('thongBao');
 
         // su kien chuyen doi giua cac chuc nang
@@ -115,6 +124,7 @@
             vungGop.classList.remove('hien-thi');
             vungXoa.classList.remove('hien-thi');
             vungScan.classList.remove('hien-thi');
+            vungJpg.classList.remove('hien-thi');
             theThongBao.innerText = ""; // xoa thong bao cu
             
             // hien thi vung tuong ung
@@ -122,6 +132,7 @@
             if (this.value === 'gop') vungGop.classList.add('hien-thi');
             if (this.value === 'xoa') vungXoa.classList.add('hien-thi');
             if (this.value === 'scan') vungScan.classList.add('hien-thi');
+            if (this.value === 'jpg') vungJpg.classList.add('hien-thi');
         });
 
         // --- CAC HAM HO TRO CHUNG ---
@@ -134,7 +145,7 @@
             if (loai === 'thanh-cong') theThongBao.style.color = "#28a745";
         }
 
-        // ham don gian hoa viec xuat file de tai ve
+        // ham don gian hoa viec xuat file pdf de tai ve
         function taiXuongFile(duLieuUint8Array, tenFile) {
             const doiTuongBlob = new Blob([duLieuUint8Array], { type: "application/pdf" });
             const duongDanTaiVe = URL.createObjectURL(doiTuongBlob);
@@ -143,6 +154,14 @@
             theTaiVe.download = tenFile;
             theTaiVe.click();
             URL.revokeObjectURL(duongDanTaiVe);
+        }
+
+        // ham tai xuong truc tiep chuoi du lieu base64 cua hinh anh
+        function taiXuongAnh(duLieuAnhBase64, tenFile) {
+            const theTaiVe = document.createElement("a");
+            theTaiVe.href = duLieuAnhBase64;
+            theTaiVe.download = tenFile;
+            theTaiVe.click();
         }
 
         // ham cap nhat thong tin file khi nguoi dung tai len
@@ -180,11 +199,12 @@
             }
         }
 
-        // gan su kien doc thong tin file cho 4 o input
+        // gan su kien doc thong tin file cho 5 o input
         document.getElementById('chonFileTach').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileTach'));
         document.getElementById('chonFileGop').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileGop'));
         document.getElementById('chonFileXoa').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileXoa'));
         document.getElementById('chonFileScan').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileScan'));
+        document.getElementById('chonFileJpg').addEventListener('change', (suKien) => capNhatThongTinFile(suKien, 'thongTinFileJpg'));
 
 
         // --- CHUC NANG 1: TACH PDF ---
@@ -410,11 +430,60 @@
             }
         }
 
+        // --- CHUC NANG 5: CHUYEN PDF THANH JPG ---
+        async function xuLyChuyenPdfThanhJpg() {
+            const fileInput = document.getElementById('chonFileJpg');
+            
+            if (fileInput.files.length === 0) return hienThiThongBao("Vui lòng chọn tệp PDF cần chuyển đổi!", "loi");
+
+            const fileDuocChon = fileInput.files[0];
+            const tenFileGoc = fileDuocChon.name.replace('.pdf', '');
+
+            try {
+                hienThiThongBao("Đang xử lý và tải về từng ảnh...", "tien-trinh");
+
+                const duLieuFile = await fileDuocChon.arrayBuffer();
+                const taiLieuPdfJs = await pdfjsLib.getDocument({ data: duLieuFile }).promise;
+                const tongSoTrang = taiLieuPdfJs.numPages;
+
+                // lap qua tung trang va ve ra canvas giong chuc nang scan
+                for (let i = 1; i <= tongSoTrang; i++) {
+                    const trangPdfJs = await taiLieuPdfJs.getPage(i);
+                    // dat ti le 2.0 de anh xuat ra ro net
+                    const khungHinh = trangPdfJs.getViewport({ scale: 2.0 });
+
+                    const theCanvas = document.createElement('canvas');
+                    const nguoiVeCanvas = theCanvas.getContext('2d');
+                    theCanvas.height = khungHinh.height;
+                    theCanvas.width = khungHinh.width;
+
+                    const thaoTacVe = { canvasContext: nguoiVeCanvas, viewport: khungHinh };
+                    await trangPdfJs.render(thaoTacVe).promise;
+
+                    // xuat canvas thanh du lieu anh base64
+                    const duLieuAnh = theCanvas.toDataURL('image/jpeg', 0.95);
+                    
+                    // goi ham tai xuong truc tiep hinh anh
+                    taiXuongAnh(duLieuAnh, `${tenFileGoc}_trang_${i}.jpg`);
+                    
+                    // tam dung 0.5s de trinh duyet khong chan thao tac tai ve lien tuc
+                    await tamDung(500); 
+                }
+
+                hienThiThongBao("Đã chuyển thành ảnh JPG và tải về hoàn tất!", "thanh-cong");
+
+            } catch (loi) {
+                console.error(loi);
+                hienThiThongBao("Đã xảy ra lỗi khi chuyển đổi sang JPG.", "loi");
+            }
+        }
+
         // --- GAN SU KIEN CHO CAC NUT BAM ---
         document.getElementById('nutTach').addEventListener('click', xuLyTachPdf);
         document.getElementById('nutGop').addEventListener('click', xuLyGopPdf);
         document.getElementById('nutXoa').addEventListener('click', xuLyXoaTrangPdf);
         document.getElementById('nutScan').addEventListener('click', xuLyChuyenScanPdf);
+        document.getElementById('nutJpg').addEventListener('click', xuLyChuyenPdfThanhJpg);
 
     </script>
 </body>
